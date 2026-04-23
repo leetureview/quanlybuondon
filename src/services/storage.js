@@ -1,3 +1,13 @@
+import { db } from './firebase';
+import {
+    collection,
+    getDocs,
+    doc,
+    setDoc,
+    deleteDoc,
+    writeBatch,
+} from 'firebase/firestore';
+
 const STORAGE_KEYS = {
     DRIVERS: 'taxi123go_drivers',
     DEPOSITS: 'taxi123go_deposits',
@@ -5,6 +15,15 @@ const STORAGE_KEYS = {
     ADVANCES: 'taxi123go_advances',
     EXPENSES: 'taxi123go_expenses',
     NIGHT_SHIFTS: 'taxi123go_night_shifts',
+};
+
+const FS_COLLECTIONS = {
+    [STORAGE_KEYS.DRIVERS]: 'drivers',
+    [STORAGE_KEYS.DEPOSITS]: 'deposits',
+    [STORAGE_KEYS.REVENUES]: 'revenues',
+    [STORAGE_KEYS.ADVANCES]: 'advances',
+    [STORAGE_KEYS.EXPENSES]: 'expenses',
+    [STORAGE_KEYS.NIGHT_SHIFTS]: 'nightShifts',
 };
 
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -18,13 +37,69 @@ const setItems = (key, items) => {
     localStorage.setItem(key, JSON.stringify(items));
 };
 
-export const initializeData = (mockDrivers, mockDeposits, mockRevenues, mockAdvances, mockExpenses, mockNightShifts) => {
-    if (!getItems(STORAGE_KEYS.DRIVERS)) setItems(STORAGE_KEYS.DRIVERS, mockDrivers);
-    if (!getItems(STORAGE_KEYS.DEPOSITS)) setItems(STORAGE_KEYS.DEPOSITS, mockDeposits);
-    if (!getItems(STORAGE_KEYS.REVENUES)) setItems(STORAGE_KEYS.REVENUES, mockRevenues);
-    if (mockAdvances && !getItems(STORAGE_KEYS.ADVANCES)) setItems(STORAGE_KEYS.ADVANCES, mockAdvances);
-    if (mockExpenses && !getItems(STORAGE_KEYS.EXPENSES)) setItems(STORAGE_KEYS.EXPENSES, mockExpenses);
-    if (mockNightShifts && !getItems(STORAGE_KEYS.NIGHT_SHIFTS)) setItems(STORAGE_KEYS.NIGHT_SHIFTS, mockNightShifts);
+const fsWrite = (key, item) => {
+    const colName = FS_COLLECTIONS[key];
+    if (!colName || !item?.id) return;
+    setDoc(doc(db, colName, String(item.id)), item).catch((err) =>
+        console.error(`[Firestore write ${colName}]`, err)
+    );
+};
+
+const fsDelete = (key, id) => {
+    const colName = FS_COLLECTIONS[key];
+    if (!colName) return;
+    deleteDoc(doc(db, colName, String(id))).catch((err) =>
+        console.error(`[Firestore delete ${colName}]`, err)
+    );
+};
+
+const pullCollection = async (colName) => {
+    const snap = await getDocs(collection(db, colName));
+    return snap.docs.map((d) => d.data());
+};
+
+const pushAllToFirestore = async (colName, items) => {
+    const batch = writeBatch(db);
+    items.forEach((item) => {
+        if (item?.id) batch.set(doc(db, colName, String(item.id)), item);
+    });
+    await batch.commit();
+};
+
+export const initializeData = async (
+    mockDrivers,
+    mockDeposits,
+    mockRevenues,
+    mockAdvances,
+    mockExpenses,
+    mockNightShifts
+) => {
+    const mapping = [
+        [STORAGE_KEYS.DRIVERS, mockDrivers],
+        [STORAGE_KEYS.DEPOSITS, mockDeposits],
+        [STORAGE_KEYS.REVENUES, mockRevenues],
+        [STORAGE_KEYS.ADVANCES, mockAdvances],
+        [STORAGE_KEYS.EXPENSES, mockExpenses],
+        [STORAGE_KEYS.NIGHT_SHIFTS, mockNightShifts],
+    ];
+
+    for (const [key, mock] of mapping) {
+        const colName = FS_COLLECTIONS[key];
+        try {
+            const fsItems = await pullCollection(colName);
+            if (fsItems.length > 0) {
+                setItems(key, fsItems);
+            } else if (mock && mock.length > 0) {
+                await pushAllToFirestore(colName, mock);
+                setItems(key, mock);
+            } else {
+                setItems(key, []);
+            }
+        } catch (err) {
+            console.error(`[Firestore init ${colName}] falling back to localStorage`, err);
+            if (!getItems(key) && mock) setItems(key, mock);
+        }
+    }
 };
 
 export const driverService = {
@@ -35,6 +110,7 @@ export const driverService = {
         const newDriver = { ...driver, id: generateId() };
         drivers.push(newDriver);
         setItems(STORAGE_KEYS.DRIVERS, drivers);
+        fsWrite(STORAGE_KEYS.DRIVERS, newDriver);
         return newDriver;
     },
     update: (id, updates) => {
@@ -43,6 +119,7 @@ export const driverService = {
         if (index !== -1) {
             drivers[index] = { ...drivers[index], ...updates };
             setItems(STORAGE_KEYS.DRIVERS, drivers);
+            fsWrite(STORAGE_KEYS.DRIVERS, drivers[index]);
             return drivers[index];
         }
         return null;
@@ -50,6 +127,7 @@ export const driverService = {
     delete: (id) => {
         const filtered = (getItems(STORAGE_KEYS.DRIVERS) || []).filter(d => d.id !== id);
         setItems(STORAGE_KEYS.DRIVERS, filtered);
+        fsDelete(STORAGE_KEYS.DRIVERS, id);
     }
 };
 
@@ -61,6 +139,7 @@ export const depositService = {
         const newDeposit = { ...deposit, id: generateId() };
         deposits.push(newDeposit);
         setItems(STORAGE_KEYS.DEPOSITS, deposits);
+        fsWrite(STORAGE_KEYS.DEPOSITS, newDeposit);
         return newDeposit;
     },
     update: (id, updates) => {
@@ -73,6 +152,7 @@ export const depositService = {
             else updated.status = 'unpaid';
             deposits[index] = updated;
             setItems(STORAGE_KEYS.DEPOSITS, deposits);
+            fsWrite(STORAGE_KEYS.DEPOSITS, deposits[index]);
             return deposits[index];
         }
         return null;
@@ -80,6 +160,7 @@ export const depositService = {
     delete: (id) => {
         const filtered = (getItems(STORAGE_KEYS.DEPOSITS) || []).filter(d => d.id !== id);
         setItems(STORAGE_KEYS.DEPOSITS, filtered);
+        fsDelete(STORAGE_KEYS.DEPOSITS, id);
     }
 };
 
@@ -94,6 +175,7 @@ export const revenueService = {
         const newRevenue = { ...revenue, id: generateId() };
         revenues.push(newRevenue);
         setItems(STORAGE_KEYS.REVENUES, revenues);
+        fsWrite(STORAGE_KEYS.REVENUES, newRevenue);
         return newRevenue;
     },
     update: (id, updates) => {
@@ -102,6 +184,7 @@ export const revenueService = {
         if (index !== -1) {
             revenues[index] = { ...revenues[index], ...updates };
             setItems(STORAGE_KEYS.REVENUES, revenues);
+            fsWrite(STORAGE_KEYS.REVENUES, revenues[index]);
             return revenues[index];
         }
         return null;
@@ -109,6 +192,7 @@ export const revenueService = {
     delete: (id) => {
         const filtered = (getItems(STORAGE_KEYS.REVENUES) || []).filter(r => r.id !== id);
         setItems(STORAGE_KEYS.REVENUES, filtered);
+        fsDelete(STORAGE_KEYS.REVENUES, id);
     },
     getTotalByMonth: (month) =>
         (getItems(STORAGE_KEYS.REVENUES) || [])
@@ -116,7 +200,6 @@ export const revenueService = {
             .reduce((sum, r) => sum + r.amount, 0)
 };
 
-// Advance service: { id, driverId, driverName, driverAvatar, date, amount, reason, status, note }
 export const advanceService = {
     getAll: () => getItems(STORAGE_KEYS.ADVANCES) || [],
     getByMonth: (month) =>
@@ -128,6 +211,7 @@ export const advanceService = {
         const newAdvance = { ...advance, id: generateId() };
         advances.unshift(newAdvance);
         setItems(STORAGE_KEYS.ADVANCES, advances);
+        fsWrite(STORAGE_KEYS.ADVANCES, newAdvance);
         return newAdvance;
     },
     update: (id, updates) => {
@@ -136,6 +220,7 @@ export const advanceService = {
         if (index !== -1) {
             advances[index] = { ...advances[index], ...updates };
             setItems(STORAGE_KEYS.ADVANCES, advances);
+            fsWrite(STORAGE_KEYS.ADVANCES, advances[index]);
             return advances[index];
         }
         return null;
@@ -143,10 +228,10 @@ export const advanceService = {
     delete: (id) => {
         const filtered = (getItems(STORAGE_KEYS.ADVANCES) || []).filter(a => a.id !== id);
         setItems(STORAGE_KEYS.ADVANCES, filtered);
+        fsDelete(STORAGE_KEYS.ADVANCES, id);
     }
 };
 
-// Expense service: { id, date, category, description, amount, note }
 export const expenseService = {
     getAll: () => getItems(STORAGE_KEYS.EXPENSES) || [],
     getByMonth: (month) =>
@@ -156,6 +241,7 @@ export const expenseService = {
         const newExpense = { ...expense, id: generateId() };
         expenses.unshift(newExpense);
         setItems(STORAGE_KEYS.EXPENSES, expenses);
+        fsWrite(STORAGE_KEYS.EXPENSES, newExpense);
         return newExpense;
     },
     update: (id, updates) => {
@@ -164,6 +250,7 @@ export const expenseService = {
         if (index !== -1) {
             expenses[index] = { ...expenses[index], ...updates };
             setItems(STORAGE_KEYS.EXPENSES, expenses);
+            fsWrite(STORAGE_KEYS.EXPENSES, expenses[index]);
             return expenses[index];
         }
         return null;
@@ -171,10 +258,10 @@ export const expenseService = {
     delete: (id) => {
         const filtered = (getItems(STORAGE_KEYS.EXPENSES) || []).filter(e => e.id !== id);
         setItems(STORAGE_KEYS.EXPENSES, filtered);
+        fsDelete(STORAGE_KEYS.EXPENSES, id);
     }
 };
 
-// Night shift service: { id, driverId, driverName, driverAvatar, date, note }
 export const nightShiftService = {
     getAll: () => getItems(STORAGE_KEYS.NIGHT_SHIFTS) || [],
     getByMonth: (year, month) => {
@@ -188,11 +275,13 @@ export const nightShiftService = {
         const newShift = { ...shift, id: generateId() };
         shifts.push(newShift);
         setItems(STORAGE_KEYS.NIGHT_SHIFTS, shifts);
+        fsWrite(STORAGE_KEYS.NIGHT_SHIFTS, newShift);
         return newShift;
     },
     delete: (id) => {
         const filtered = (getItems(STORAGE_KEYS.NIGHT_SHIFTS) || []).filter(s => s.id !== id);
         setItems(STORAGE_KEYS.NIGHT_SHIFTS, filtered);
+        fsDelete(STORAGE_KEYS.NIGHT_SHIFTS, id);
     }
 };
 

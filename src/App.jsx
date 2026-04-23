@@ -1,5 +1,5 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Drivers from './pages/Drivers';
@@ -15,9 +15,21 @@ import { initializeData } from './services/storage';
 import { mockDrivers, mockDeposits, mockRevenues, mockAdvances, mockExpenses, mockNightShifts } from './data/mockData';
 
 function App() {
+    const [ready, setReady] = useState(false);
+
     useEffect(() => {
-        initializeData(mockDrivers, mockDeposits, mockRevenues, mockAdvances, mockExpenses, mockNightShifts);
+        initializeData(mockDrivers, mockDeposits, mockRevenues, mockAdvances, mockExpenses, mockNightShifts)
+            .catch((err) => console.error('initializeData failed:', err))
+            .finally(() => setReady(true));
     }, []);
+
+    if (!ready) {
+        return (
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif', color: '#6b7280' }}>
+                Đang đồng bộ dữ liệu từ Firebase...
+            </div>
+        );
+    }
 
     return (
         <HashRouter>

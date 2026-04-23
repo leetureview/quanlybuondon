@@ -1,0 +1,18 @@
+node_modules
+dist
+dist-ssr
+.DS_Store
+*.local
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.log
+.env
+.env.local
+.env.*.local
+
+# Folders not part of this project
+quanlybuondon/
+claudekit-engineer/
+skills/
+.claude/

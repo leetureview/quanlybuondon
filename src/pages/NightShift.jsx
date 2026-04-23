@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, ChevronLeft, ChevronRight, Moon, Trash2, X } from 'lucide-react';
 import { nightShiftService, driverService } from '../services/storage';
+import { useAuth } from '../contexts/AuthContext';
 
 const DAYS_VN = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const MONTHS_VN = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
@@ -18,6 +19,8 @@ export default function NightShift() {
     const [deleteModal, setDeleteModal] = useState({ show: false, item: null });
     const [form, setForm] = useState({ driverId: '', note: '' });
     const [errors, setErrors] = useState({});
+    const { role } = useAuth();
+    const isAdmin = role === 'admin';
 
     useEffect(() => { loadData(); }, [year, month]);
 
@@ -139,7 +142,7 @@ export default function NightShift() {
                             <div
                                 key={i}
                                 className={`min-h-[100px] border-b border-r border-gray-100 p-2 ${day ? 'hover:bg-gray-50 cursor-pointer' : 'bg-gray-50/50'} ${colIdx === 0 ? 'border-l-0' : ''}`}
-                                onClick={() => day && openAdd(day)}
+                                onClick={() => day && isAdmin && openAdd(day)}
                             >
                                 {day && (
                                     <>
@@ -151,7 +154,7 @@ export default function NightShift() {
                                                 <div
                                                     key={s.id}
                                                     className="flex items-center gap-1 bg-indigo-100 text-indigo-700 rounded px-1 py-0.5 text-xs"
-                                                    onClick={e => { e.stopPropagation(); setDeleteModal({ show: true, item: s }); }}
+                                                    onClick={e => { e.stopPropagation(); isAdmin && setDeleteModal({ show: true, item: s }); }}
                                                 >
                                                     <img src={s.driverAvatar} alt="" className="w-3.5 h-3.5 rounded-full" />
                                                     <span className="truncate">{s.driverName.split(' ').pop()}</span>
@@ -201,7 +204,7 @@ export default function NightShift() {
                                             </td>
                                             <td className="px-6 py-3 text-gray-400 text-sm">{s.note || '—'}</td>
                                             <td className="px-6 py-3 text-right">
-                                                <button onClick={() => setDeleteModal({ show: true, item: s })} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                                {isAdmin && <button onClick={() => setDeleteModal({ show: true, item: s })} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>}
                                             </td>
                                         </tr>
                                     );

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, CreditCard, Clock, CheckCircle, Trash2, Edit2, X } from 'lucide-react';
 import { advanceService, driverService } from '../services/storage';
+import { useAuth } from '../contexts/AuthContext';
 
 const formatCurrency = (amount) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
@@ -35,6 +36,8 @@ export default function Advances() {
     const [deleteModal, setDeleteModal] = useState({ show: false, item: null });
     const [form, setForm] = useState({ driverId: '', date: new Date().toISOString().split('T')[0], amount: '', reason: '', note: '' });
     const [errors, setErrors] = useState({});
+    const { role } = useAuth();
+    const isAdmin = role === 'admin';
 
     useEffect(() => {
         loadData();
@@ -126,9 +129,11 @@ export default function Advances() {
                     <h1 className="text-2xl font-bold text-gray-900">Tạm ứng tài xế</h1>
                     <p className="text-gray-500 mt-1">Quản lý các khoản tiền đã ứng cho tài xế</p>
                 </div>
-                <button onClick={openAdd} className="btn btn-primary">
-                    <Plus size={20} /> Cho ứng tiền
-                </button>
+                {isAdmin && (
+                    <button onClick={openAdd} className="btn btn-primary">
+                        <Plus size={20} /> Cho ứng tiền
+                    </button>
+                )}
             </div>
 
             {/* Month filter + Stats */}
@@ -211,8 +216,9 @@ export default function Advances() {
                                     <td className="px-6 py-4 text-gray-600">{item.reason}</td>
                                     <td className="px-6 py-4">
                                         <button
-                                            onClick={() => toggleStatus(item)}
-                                            className={`badge cursor-pointer transition-colors ${item.status === 'pending'
+                                            onClick={() => isAdmin && toggleStatus(item)}
+                                            disabled={!isAdmin}
+                                            className={`badge transition-colors ${isAdmin ? 'cursor-pointer' : 'cursor-default'} ${item.status === 'pending'
                                                 ? 'bg-orange-100 text-orange-600 hover:bg-orange-200'
                                                 : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
                                                 } flex items-center gap-1`}
@@ -225,14 +231,10 @@ export default function Advances() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center justify-end gap-2">
-                                            <button
-                                                onClick={() => openEdit(item)}
-                                                className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                            ><Edit2 size={16} /></button>
-                                            <button
-                                                onClick={() => setDeleteModal({ show: true, item })}
-                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                            ><Trash2 size={16} /></button>
+                                            {isAdmin && <>
+                                                <button onClick={() => openEdit(item)} className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"><Edit2 size={16} /></button>
+                                                <button onClick={() => setDeleteModal({ show: true, item })} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                            </>}
                                         </div>
                                     </td>
                                 </tr>

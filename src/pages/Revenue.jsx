@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, TrendingUp, Calendar, Trash2, Filter, Car, Gift, AlertTriangle, DollarSign } from 'lucide-react';
 import { revenueService, driverService } from '../services/storage';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Revenue() {
     const [revenues, setRevenues] = useState([]);
@@ -16,6 +17,8 @@ export default function Revenue() {
         penalty: ''
     });
     const [deleteModal, setDeleteModal] = useState({ show: false, revenue: null });
+    const { role } = useAuth();
+    const isAdmin = role === 'admin';
 
     useEffect(() => {
         loadData();
@@ -116,13 +119,11 @@ export default function Revenue() {
                     <h1 className="text-2xl font-bold text-gray-900">Quản lý doanh thu</h1>
                     <p className="text-gray-500 mt-1">Nhập và theo dõi doanh thu theo tháng</p>
                 </div>
-                <button
-                    onClick={handleOpenAdd}
-                    className="btn btn-primary"
-                >
-                    <Plus size={20} />
-                    Nhập doanh thu
-                </button>
+                {isAdmin && (
+                    <button onClick={handleOpenAdd} className="btn btn-primary">
+                        <Plus size={20} /> Nhập doanh thu
+                    </button>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -232,13 +233,15 @@ export default function Revenue() {
                                             {revenue.penalty ? formatCurrency(revenue.penalty) : '—'}
                                         </td>
                                         <td className="px-4 py-4 text-right">
-                                            <button
-                                                onClick={() => setDeleteModal({ show: true, revenue })}
-                                                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                title="Xóa"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={() => setDeleteModal({ show: true, revenue })}
+                                                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Xóa"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))

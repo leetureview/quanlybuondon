@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Receipt, Trash2, Edit2, X, Filter, TrendingDown } from 'lucide-react';
 import { expenseService } from '../services/storage';
 import { expenseCategories } from '../data/mockData';
+import { useAuth } from '../contexts/AuthContext';
 
 const formatCurrency = (amount) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
@@ -45,6 +46,8 @@ export default function Expenses() {
     const [filterCategory, setFilterCategory] = useState('all');
     const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], category: expenseCategories[0], description: '', amount: '', note: '' });
     const [errors, setErrors] = useState({});
+    const { role } = useAuth();
+    const isAdmin = role === 'admin';
 
     useEffect(() => { loadData(); }, []);
 
@@ -115,9 +118,11 @@ export default function Expenses() {
                     <h1 className="text-2xl font-bold text-gray-900">Quản lý chi phí</h1>
                     <p className="text-gray-500 mt-1">Theo dõi chi phí vận hành theo tháng</p>
                 </div>
-                <button onClick={openAdd} className="btn btn-primary">
-                    <Plus size={20} /> Thêm chi phí
-                </button>
+                {isAdmin && (
+                    <button onClick={openAdd} className="btn btn-primary">
+                        <Plus size={20} /> Thêm chi phí
+                    </button>
+                )}
             </div>
 
             {/* Month + Stats */}
@@ -203,8 +208,10 @@ export default function Expenses() {
                                     <td className="px-6 py-4 text-gray-400 text-sm">{item.note || '—'}</td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center justify-end gap-2">
-                                            <button onClick={() => openEdit(item)} className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"><Edit2 size={16} /></button>
-                                            <button onClick={() => setDeleteModal({ show: true, item })} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                            {isAdmin && <>
+                                                <button onClick={() => openEdit(item)} className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"><Edit2 size={16} /></button>
+                                                <button onClick={() => setDeleteModal({ show: true, item })} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                            </>}
                                         </div>
                                     </td>
                                 </tr>

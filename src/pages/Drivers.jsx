@@ -2,11 +2,14 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Edit2, Trash2, Eye } from 'lucide-react';
 import { driverService } from '../services/storage';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Drivers() {
     const [drivers, setDrivers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [deleteModal, setDeleteModal] = useState({ show: false, driver: null });
+    const { role } = useAuth();
+    const isAdmin = role === 'admin';
 
     useEffect(() => {
         loadDrivers();
@@ -37,10 +40,12 @@ export default function Drivers() {
                     <h1 className="text-2xl font-bold text-gray-900">Quản lý tài xế</h1>
                     <p className="text-gray-500 mt-1">Danh sách và quản lý thông tin tài xế</p>
                 </div>
-                <Link to="/drivers/new" className="btn btn-primary">
-                    <Plus size={20} />
-                    Thêm tài xế
-                </Link>
+                {isAdmin && (
+                    <Link to="/drivers/new" className="btn btn-primary">
+                        <Plus size={20} />
+                        Thêm tài xế
+                    </Link>
+                )}
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
@@ -109,20 +114,22 @@ export default function Drivers() {
                                                 >
                                                     <Eye size={18} />
                                                 </Link>
-                                                <Link
-                                                    to={`/drivers/edit/${driver.id}`}
-                                                    className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                                    title="Chỉnh sửa"
-                                                >
-                                                    <Edit2 size={18} />
-                                                </Link>
-                                                <button
-                                                    onClick={() => setDeleteModal({ show: true, driver })}
-                                                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                    title="Xóa"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
+                                                {isAdmin && <>
+                                                    <Link
+                                                        to={`/drivers/edit/${driver.id}`}
+                                                        className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                        title="Chỉnh sửa"
+                                                    >
+                                                        <Edit2 size={18} />
+                                                    </Link>
+                                                    <button
+                                                        onClick={() => setDeleteModal({ show: true, driver })}
+                                                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Xóa"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </>}
                                             </div>
                                         </td>
                                     </tr>

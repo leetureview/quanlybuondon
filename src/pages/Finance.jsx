@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, DollarSign, CheckCircle, AlertCircle, Clock, Plus, Trash2 } from 'lucide-react';
 import { depositService, driverService } from '../services/storage';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Finance() {
     const [deposits, setDeposits] = useState([]);
@@ -10,6 +11,8 @@ export default function Finance() {
     const [paymentAmount, setPaymentAmount] = useState('');
     const [requiredAmount, setRequiredAmount] = useState('');
     const [selectedDriverId, setSelectedDriverId] = useState('');
+    const { role } = useAuth();
+    const isAdmin = role === 'admin';
 
     useEffect(() => {
         loadDeposits();
@@ -157,13 +160,11 @@ export default function Finance() {
                     <h1 className="text-2xl font-bold text-gray-900">Quản lý tiền thế chân</h1>
                     <p className="text-gray-500 mt-1">Theo dõi tiền cọc của các tài xế</p>
                 </div>
-                <button
-                    onClick={handleOpenAdd}
-                    className="btn btn-primary flex items-center gap-2"
-                >
-                    <Plus size={18} />
-                    Thêm mới
-                </button>
+                {isAdmin && (
+                    <button onClick={handleOpenAdd} className="btn btn-primary flex items-center gap-2">
+                        <Plus size={18} /> Thêm mới
+                    </button>
+                )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
